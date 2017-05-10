@@ -1,0 +1,64 @@
+.posbar {
+  fill: steelblue;
+  stroke: #000;
+}
+
+.posbar:hover {
+  fill: LightSteelBlue;
+}
+
+.negbar {
+  fill: FireBrick;
+  stroke: #000;
+}
+
+.negbar:hover {
+  fill: IndianRed;
+}
+
+.neubar {
+  fill: Grey;
+  stroke: #000;
+}
+
+.neubar:hover {
+  fill: DarkGrey;
+}
+
+.negLine {
+  stroke: black;
+  stroke-width: 2;
+}
+
+.posLine {
+  stroke: black;
+  stroke-width: 2;
+}
+
+.legend {
+  fill: none;
+  stroke: #000;
+}
+
+.tooltip {
+  position: absolute;
+  width: 170px;
+  height: 45px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  border-radius: 2px;
+  font-size: 75%;
+  pointer-events: none;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.x.axis path {
+  display: none;
+}
