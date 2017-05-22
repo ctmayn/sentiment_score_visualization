@@ -53,3 +53,35 @@ Services Used:
       
 Usage:
   
+To use this, you will need to download the sentimentVsScore.js as well as the css.
+
+You will then need to import the javascript file using this line:
+<head>
+  ...
+  <script src=PATH_TO_FILE/sentimentVsScore.js></script>
+  ...
+<head>
+
+You will also need to reference the style sheet provided using the line:
+<head>
+  ...
+  <link rel="stylesheet" href="PATH_TO_FILE/css/barchart.css">
+  ...
+<head>
+
+Lastly you will need to import the D3 library using the line:
+<head>
+  ...
+  <script src="https://d3js.org/d3.v3.min.js"></script>
+  ...
+<head>
+
+You then can make draw the graph using:
+<script>
+  ...
+  var graph = new sentimentVsScoreGraph();
+  graph.load();
+  ...
+</script>
+
+All commands are shown together in the summative_bar_chart.html file.  Note, due to the sheer amount of data, it will take the the graph a couple of minutes to appear because of all of the data requested and processed from the web services.
