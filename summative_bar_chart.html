@@ -48,25 +48,53 @@
       var numPages = raw_reviews.totalpages;
       //Now we can get all the reviews that fit the criteria
       var getReviews = new XMLHttpRequest();
-      getReviewsURL = "http://peerlogic.csc.ncsu.edu/datawarehouse/answers?comment_len={\"gt\":5}&score={\"ne\":null}&orderby=criterion_id&page=1&pagelength="  + Math.floor(numPages/50);
+      getReviewsURL = "http://peerlogic.csc.ncsu.edu/datawarehouse/answers?comment_len={\"gt\":5}&score={\"ne\":null}&orderby=criterion_id&page=1&pagelength="  + numPages;
       getReviews.open("GET", getReviewsURL, true);
       getReviews.onload = function() {
         if(getReviews.readyState == 4 && getReviews.status == 200) {
           raw_reviews = JSON.parse(getReviews.responseText);
-          processReviews(raw_reviews);
+          getFirstCriteria(raw_reviews);
         }
       }
       getReviews.send();
     }
+    
+    function getFirstCriteria(reviewList){
+      var getRating = new XMLHttpRequest();
+      var getRatingURL = "http://peerlogic.csc.ncsu.edu/datawarehouse/criteria?pagelength=1";
+      getRating.open("GET", getRatingURL, true);
+      getRating.setRequestHeader("Content-type", "'application/json; charset=UTF-8");
+      getRating.onload = function() {
+        if(getRating.readyState == 4 && getRating.status == 200) {
+            getCriteria(reviewList, JSON.parse(getRating.responseText));
+          }
+      }
+      getRating.send()
+    }
+    
+    function getCriteria(reviewList, firstCriterion){
+      var getRatings = new XMLHttpRequest();
+      var getRatingsURL = "http://peerlogic.csc.ncsu.edu/datawarehouse/criteria?pagelength=" + firstCriterion.totalpages;
+      getRatings.open("GET", getRatingsURL, true);
+      getRatings.setRequestHeader("Content-type", "'application/json; charset=UTF-8");
+      getRatings.onload = function() {
+        if(getRatings.readyState == 4 && getRatings.status == 200) {
+          sentiments= [];
+          processReviews(reviewList, 0, sentiments, getRatings.responseText);
+        }
+      }
+      getRatings.send()
+    }
+    
     /**
       *Once we have all the reviews we will need to filter them into seperate lists.  One will be used to pass into the 
       *Sentiment analysis webservice the other will be used to store the filtered data
     */
-    function processReviews(raw_reviews){
+    function processReviews(raw_reviews, position, sentiments, criterion){
       //Make a new object that contains an array that can be will be used to get the negative and positive sentiment via the sentiment analysis webservice
       var reviewPOSTList = new Object();
       reviewPOSTList.reviews = [];
-      for(var i = 0; i < raw_reviews.records.length; i++ ){
+      for(var i = position; i < position + 7500 && i < raw_reviews.records.length; i++ ){
         //make a review object to store on the lists
         var review = new Object();
         //Add the id and text to the review
@@ -82,43 +110,27 @@
       getSentiment.setRequestHeader("Content-type", "application/json; charset=UTF-8");
       getSentiment.onreadystatechange = function() {
         if(getSentiment.readyState == 4 && getSentiment.status == 200) {
-          getFirstCriteria(getSentiment.responseText, raw_reviews.records);
+          if(position + 7500 <= raw_reviews.records.length){
+            new_reviews = JSON.parse(getSentiment.responseText);
+            sentiments = sentiments.concat(new_reviews.sentiments);
+            processReviews(raw_reviews, position + 7500, sentiments, criterion);
+          } else {
+            new_reviews = JSON.parse(getSentiment.responseText);
+            sentiments = sentiments.concat(new_reviews.sentiments);
+            totalSentiment(sentiments, raw_reviews, criterion);
+          }
         }
       }
       getSentiment.send(JSON.stringify(reviewPOSTList));
     }
     
-    function getFirstCriteria(raw_sentiments, reviewList){
-      var getRating = new XMLHttpRequest();
-      var getRatingURL = "http://peerlogic.csc.ncsu.edu/datawarehouse/criteria?pagelength=1";
-      getRating.open("GET", getRatingURL, true);
-      getRating.setRequestHeader("Content-type", "'application/json; charset=UTF-8");
-      getRating.onload = function() {
-        if(getRating.readyState == 4 && getRating.status == 200) {
-            getCriteria(raw_sentiments, reviewList, JSON.parse(getRating.responseText));
-          }
-      }
-      getRating.send()
-    }
     
-    function getCriteria(raw_sentiments, reviewList, firstCriterion){
-      var getRatings = new XMLHttpRequest();
-      var getRatingsURL = "http://peerlogic.csc.ncsu.edu/datawarehouse/criteria?pagelength=" + firstCriterion.totalpages;
-      getRatings.open("GET", getRatingsURL, true);
-      getRatings.setRequestHeader("Content-type", "'application/json; charset=UTF-8");
-      getRatings.onload = function() {
-        if(getRatings.readyState == 4 && getRatings.status == 200) {
-            totalSentiment(raw_sentiments, reviewList, getRatings.responseText);
-          }
-      }
-      getRatings.send()
-    }
     
     /**
       *This function takes the reviews and the sentiment derived by the webservice and compibines them into object which
       * are then pushed to the data array which is used for storing the review data.
     */
-    function totalSentiment(raw_sentiments, reviewList, rawCriterion){
+    function totalSentiment(sentiments, reviewList, rawCriterion){
       var criteria = [];
       var rating_criteria = JSON.parse(rawCriterion);
       for(var i = 0; i < rating_criteria.records.length; i++){
@@ -130,24 +142,21 @@
           criteria.push(criterion);
         }
       }
-      
-      //The the list of java objects representing the string give by the web service
-      var sentimentList = JSON.parse(raw_sentiments);
       //For each review we will take the necessary info from both of the lists and add them to an objec which will be pushed to the data list
       var index = 0;
-      
-      for(var i = 0; i < reviewList.length; i++ ){
+      for(var i = 0; i < reviewList.records.length; i++ ){
         var completeReviewData = new Object();
-        completeReviewData.id = reviewList[i].id;
-        completeReviewData.review = reviewList[i].comment;
-        
-        while(reviewList[i].criterion_id != criteria[index].id){
+        while(reviewList.records[i].criterion_id != criteria[index].id){
           index++;
+          if(index >= criteria.length){
+            i++;
+            index = 0;
+          }
         }
-        completeReviewData.score = Math.floor(parseInt(reviewList[i].score)/(criteria[index].max - criteria[index].min) * 5);
-        completeReviewData.postone = parseFloat(sentimentList.sentiments[i].pos);
-        completeReviewData.neutone = parseFloat(sentimentList.sentiments[i].neu);
-        completeReviewData.negtone = parseFloat(sentimentList.sentiments[i].neg);
+        completeReviewData.score = Math.floor(parseInt(reviewList.records[i].score)/(criteria[index].max - criteria[index].min) * 5);
+        completeReviewData.postone = parseFloat(sentiments[i].pos);
+        completeReviewData.neutone = parseFloat(sentiments[i].neu);
+        completeReviewData.negtone = parseFloat(sentiments[i].neg);
         data.push(completeReviewData);
       }
       calculateData(drawing);
