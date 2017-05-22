@@ -18,7 +18,7 @@
     class sentimentVsScoreGraph{
     }
     
-    sentimentVsScoreGraph.prototype.start = function(){
+    sentimentVsScoreGraph.prototype.load = function(){
       //This http request gets one review to determine the number of reviews to be read in.
       var getFirstReview = new XMLHttpRequest();
       var getFirstReviewURL = "http://peerlogic.csc.ncsu.edu/datawarehouse/answers?comment_len={\"gt\":5}&score={\"ne\":null}&pagelength=1&page=1";
